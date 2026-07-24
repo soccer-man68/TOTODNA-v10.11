@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>TOTO_DNA v10.11 - Engine Synced</title>
+    <title>TOTO_DNA v10.11 - Advanced Engine</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <style>
         :root { --bg: #2c3e50; --green: #27ae60; --purple: #8e44ad; --yellow: #f1c40f; --red: #e74c3c; --dark: #1e272e; }
@@ -24,25 +24,24 @@
         .loss { color: #d63031; font-weight: bold; }
         .is-pattern { background-color: #D6EAF8; font-weight: bold; border: 1.5px solid #3498db !important; }
         .strong-pick { background: #eb4d4b !important; color: white !important; padding: 2px 5px; border-radius: 3px; font-weight: bold; }
-        .smp-league { background: #6c5ce7; color: white; padding: 2px 5px; border-radius: 3px; font-size: 10px; }
-        .tier-card { border-left: 5px solid #00d2d3; background: #2d3436; padding: 15px; margin-bottom: 15px; color: #ecf0f1; }
-        .tier-title { color: #f1c40f; font-size: 1.2rem; font-weight: bold; }
-        #modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:550px; background:white; z-index:2000; padding:20px; border-radius:10px; box-shadow:0 0 30px rgba(0,0,0,0.5); }
-        .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1999; }
+        .tier-card { border-left: 5px solid #00d2d3; background: #2d3436; padding: 18px; margin-bottom: 15px; color: #ecf0f1; border-radius: 0 8px 8px 0; }
+        .tier-title { color: #f1c40f; font-size: 1.3rem; font-weight: bold; margin-bottom: 10px; }
+        .combo-box { border-top: 1px dashed #555; padding-top: 10px; margin-top: 10px; }
+        .odds-val { color: #ff5e57; font-weight: bold; font-size: 1.2rem; }
     </style>
 </head>
 <body>
 
     <div id="password-overlay">
-        <h2 style="color: white; margin-bottom: 20px;">TOTO_DNA v10.11 ENGINE</h2>
-        <input type="password" id="pw-input" placeholder="비밀번호 **** 입력">
+        <h2 style="color: white;">TOTO_DNA v10.11 ENGINE</h2>
+        <input type="password" id="pw-input" placeholder="비밀번호 4938 입력">
         <button class="btn" style="background:var(--green); width:250px;" onclick="checkPw()">시스템 로그인</button>
     </div>
 
     <header>
         <span style="font-size: 1.3rem; font-weight: bold; color: var(--yellow);">TOTO_DNA DNA</span>
         <button class="btn" style="background:var(--green);" onclick="document.getElementById('file-input').click()">📊 데이터 분석 실행</button>
-        <button class="btn" style="background:var(--purple);" onclick="runSimulation()">🧪 성능 검증 시뮬레이션</button>
+        <button class="btn" style="background:var(--purple);" onclick="runSimulation()">🧪 성능 시뮬레이션</button>
         <input type="file" id="file-input" style="display:none" accept=".xlsx">
         <span id="status" style="color:var(--yellow); margin-left:15px;">SYSTEM READY</span>
     </header>
@@ -50,8 +49,7 @@
     <div class="tabs">
         <div class="tab active" onclick="switchTab(0)">[전체 경기]</div>
         <div class="tab" onclick="switchTab(1)">[승무패 경기]</div>
-        <div class="tab" onclick="switchTab(2)">[정밀 시나리오 검증]</div>
-        <div class="tab" onclick="switchTab(3)">[🔥 3.4.5 티어 추천]</div>
+        <div class="tab" onclick="switchTab(2)">[🔥 3.4.5 티어 추천]</div>
     </div>
 
     <div id="tab0" class="content-area active">
@@ -65,21 +63,13 @@
         </table>
     </div>
     <div id="tab1" class="content-area"><table id="list-smp"></table></div>
-    <div id="tab2" class="content-area"><table id="list-scenario"></table></div>
-    <div id="tab3" class="content-area" style="background:var(--dark);"><div id="tier-results"></div></div>
-
-    <div class="overlay" onclick="closeModal()"></div>
-    <div id="modal">
-        <h3 id="m-title">🔍 정밀 분석 리포트</h3>
-        <div id="m-content" style="white-space: pre-wrap; line-height: 1.6;"></div>
-        <button class="btn" style="background:var(--bg); width:100%; margin-top:15px;" onclick="closeModal()">닫기</button>
-    </div>
+    <div id="tab2" class="content-area" style="background:var(--dark);"><div id="tier-results"></div></div>
 
     <script>
         let normalBgColor = null;
         let pastData = [], upcomingData = [];
         let caches = { lvl1: {}, lvl2: {}, lvl3: {} };
-        let teamHistory = {}; // 파이썬 team_history 대응
+        let teamHistory = {};
 
         function checkPw() {
             if(document.getElementById('pw-input').value === "4938") document.getElementById('password-overlay').style.display='none';
@@ -98,15 +88,31 @@
             return "NO_FILL";
         }
 
+        // --- 파이썬의 itertools.combinations 구현 ---
+        function getCombinations(array, size) {
+            const result = [];
+            function backtrack(start, combo) {
+                if (combo.length === size) {
+                    result.push([...combo]);
+                    return;
+                }
+                for (let i = start; i < array.length; i++) {
+                    combo.push(array[i]);
+                    backtrack(i + 1, combo);
+                    combo.pop();
+                }
+            }
+            backtrack(0, []);
+            return result;
+        }
+
         document.getElementById('file-input').addEventListener('change', async function(e) {
             const file = e.target.files[0];
-            document.getElementById('status').innerText = "⚙️ 파이썬 동기화 엔진 가동 중...";
-            
+            document.getElementById('status').innerText = "⚙️ 엔진 동기화 중...";
             const workbook = new ExcelJS.Workbook();
             await workbook.xlsx.load(file);
             const ws = workbook.getWorksheet('일반핸디') || workbook.worksheets[0];
 
-            // 1. 배경색 학습
             const colorCounts = {};
             for(let i=2; i<=100; i++) {
                 const c = getColorKey(ws.getRow(i).getCell(8));
@@ -114,7 +120,6 @@
             }
             normalBgColor = Object.keys(colorCounts).reduce((a, b) => colorCounts[a] > colorCounts[b] ? a : b, "NO_FILL");
 
-            // 2. 엔진 초기화
             pastData = []; upcomingData = []; teamHistory = {};
             caches = { lvl1: {}, lvl2: {}, lvl3: {} };
             
@@ -150,18 +155,12 @@
                 if(m.genRes === "" || m.genRes === "None") upcomingData.push(m);
                 else {
                     pastData.push(m);
-                    // 캐싱 (Python build_stat_engine 복제)
                     const resKey = `${m.genRes}_${m.hanRes}`;
-                    const k1 = `${m.league}_${m.handi}_${m.gPat}`;
-                    const k2 = `${m.league}_${m.gPat}`;
-                    const k3 = `${m.gPat}_${m.hPat}`;
-                    
+                    const k1 = `${m.league}_${m.handi}_${m.gPat}`, k2 = `${m.league}_${m.gPat}`, k3 = `${m.gPat}_${m.hPat}`;
                     [ [caches.lvl1, k1], [caches.lvl2, k2], [caches.lvl3, k3] ].forEach(([cache, k]) => {
                         if(!cache[k]) cache[k] = {};
                         cache[k][resKey] = (cache[k][resKey] || 0) + 1;
                     });
-
-                    // 기세 데이터 (Python team_history)
                     if(!teamHistory[m.home]) teamHistory[m.home] = [];
                     if(!teamHistory[m.away]) teamHistory[m.away] = [];
                     teamHistory[m.home].push(m.genRes);
@@ -171,11 +170,10 @@
             });
 
             renderAll();
-            generateTierCombos();
-            document.getElementById('status').innerText = `✅ 동기화 완료: 과거(${pastData.length}) / 예정(${upcomingData.length})`;
+            generateTierCombos(); // 티어 생성 호출
+            document.getElementById('status').innerText = `✅ 완료: 과거(${pastData.length}) / 예정(${upcomingData.length})`;
         });
 
-        // 파이썬 get_momentum_score 완벽 복제
         function getMomentumScore(team) {
             const recent = (teamHistory[team] || []).slice(-6);
             let score = 0;
@@ -187,7 +185,6 @@
             return { score: Number(score.toFixed(1)), history: recent };
         }
 
-        // 파이썬 get_prediction_ai 완벽 복제
         function getPredictionAI(m) {
             let points = {};
             let totalHits = 0;
@@ -204,44 +201,71 @@
                         const [gRes, hRes] = resKey.split("_");
                         const count = counter[resKey];
                         totalHits += count;
-                        
-                        // 일반 패턴 가산
-                        for(let p of m.gPat) {
-                            if(gRes === p) {
-                                const k = `일반[${p}]`;
-                                points[k] = (points[k] || 0) + weight * count;
-                            }
-                        }
-                        // 핸디 패턴 가산
-                        for(let p of m.hPat) {
-                            if(hRes === p) {
-                                const k = `핸디[${p}]`;
-                                points[k] = (points[k] || 0) + weight * count;
-                            }
-                        }
+                        for(let p of m.gPat) if(gRes === p) points[`일반[${p}]`] = (points[`일반[${p}]`] || 0) + weight * count;
+                        for(let p of m.hPat) if(hRes === p) points[`핸디[${p}]`] = (points[`핸디[${p}]`] || 0) + weight * count;
                     }
                 }
             });
 
-            if(Object.keys(points).length === 0) return { text: "매칭 사례 없음", conf: 0 };
+            if(Object.keys(points).length === 0) return { text: "패턴 부족", conf: 0 };
 
-            // 기세 보정
-            const hMom = getMomentumScore(m.home).score;
-            const aMom = getMomentumScore(m.away).score;
-            const diff = hMom - aMom;
-            if(diff >= 5.0 && points["일반[승]"]) points["일반[승]"] *= 1.3;
-            else if(diff <= -5.0 && points["일반[패]"]) points["일반[패]"] *= 1.3;
+            const hMom = getMomentumScore(m.home).score, aMom = getMomentumScore(m.away).score;
+            if(hMom - aMom >= 5.0 && points["일반[승]"]) points["일반[승]"] *= 1.3;
+            else if(hMom - aMom <= -5.0 && points["일반[패]"]) points["일반[패]"] *= 1.3;
 
             const sorted = Object.entries(points).sort((a,b) => b[1] - a[1]);
             const [bestKey, bestVal] = sorted[0];
             const sumPoints = Object.values(points).reduce((a,b) => a+b, 0);
+            let confidence = Math.min(100, Math.floor((bestVal / sumPoints) * 70 + Math.min(totalHits, 25) * 1.2));
+            return { text: `[${confidence >= 82 ? '🔥강력' : (confidence >= 68 ? '추천' : '일반')}] ${bestKey} (${confidence}점)`, key: bestKey, conf: confidence };
+        }
 
-            // 신뢰도 공식 (Python 그대로)
-            let confidence = (bestVal / sumPoints) * 70 + Math.min(totalHits, 25) * 1.2;
-            confidence = Math.min(100, Math.floor(confidence));
+        function generateTierCombos() {
+            const container = document.getElementById('tier-results');
+            container.innerHTML = `<h2 style="color:var(--yellow); text-align:center;">🚀 Ninety-Nine Multi-Tier Engine</h2>`;
+            
+            // 1. 후보 경기 선정 (파이썬과 동일: conf >= 62, odds > 1.05)
+            const candidates = upcomingData.map(m => {
+                const p = getPredictionAI(m);
+                let oddsVal = 0;
+                if(p.conf >= 62) {
+                    const pick = p.key.split('[')[1][0];
+                    const idx = pick === "승" ? 0 : (pick === "무" ? 1 : 2);
+                    oddsVal = p.key.includes("일반") ? Number(m.gOdds[idx]) : Number(m.hOdds[idx]);
+                }
+                return { m, p, odds: oddsVal || 0 };
+            }).filter(c => c.odds > 1.05).sort((a,b) => b.p.conf - a.p.conf).slice(0, 24);
 
-            const prefix = confidence >= 82 ? "🔥[강력]" : (confidence >= 68 ? "[추천]" : "[일반]");
-            return { text: `${prefix} ${bestKey} (${confidence}점)`, key: bestKey, conf: confidence, hits: totalHits };
+            const findCombos = (count, minO, maxO, label) => {
+                let html = `<div class="tier-card"><div class="tier-title">💎 ${label}</div>`;
+                // 파이썬 itertools.combinations 로직 전수 조사
+                const allCombos = getCombinations(candidates, count);
+                const found = [];
+
+                allCombos.forEach(combo => {
+                    const totalO = combo.reduce((a, b) => a * b.odds, 1);
+                    const avgConf = combo.reduce((a, b) => a + b.p.conf, 0) / count;
+                    if(totalO >= minO && totalO <= maxO) found.push({combo, totalO, avgConf});
+                });
+
+                found.sort((a, b) => b.avgConf - a.avgConf); // 신뢰도순 정렬
+
+                if(found.length === 0) {
+                    html += `<div style="color:#777">해당 구간(${minO}~${maxO}배)에 맞는 최적 조합이 없습니다.</div>`;
+                } else {
+                    found.slice(0, 2).forEach(f => {
+                        html += `<div class="combo-box">★ <span class="odds-val">${f.totalO.toFixed(2)}배</span> (평균 신뢰도: ${f.avgConf.toFixed(1)}점)<br>`;
+                        f.combo.forEach(c => html += ` > ${c.m.home} vs ${c.m.away} | ${c.p.key} (${c.odds.toFixed(2)}배)<br>`);
+                        html += `</div>`;
+                    });
+                }
+                container.insertAdjacentHTML('beforeend', html + `</div>`);
+            };
+
+            // 파이썬 코드의 티어 배당 구간 설정
+            findCombos(3, 5.0, 15.0, "TIER 1 (500%~1500% 타겟)");
+            findCombos(4, 16.0, 30.0, "TIER 2 (중배당 핵심 전략)");
+            findCombos(5, 31.0, 99.0, "TIER 3 (나인티나인 잭팟)");
         }
 
         function renderAll() {
@@ -249,11 +273,11 @@
             const listSmp = document.getElementById('list-smp');
             listAll.innerHTML = ""; listSmp.innerHTML = "";
 
-            upcomingData.forEach((m, idx) => {
+            upcomingData.forEach((m) => {
                 const pred = getPredictionAI(m);
                 const colorClass = pred.key?.includes("승") ? "win" : (pred.key?.includes("패")?"loss":"draw");
                 const html = `
-                    <tr ondblclick="showDetail(${idx})">
+                    <tr>
                         <td>${m.time}</td>
                         <td><span class="${m.isSmp?'smp-league':''}">${m.league}</span></td>
                         <td style="text-align:left"><b>${m.home}</b> vs ${m.away}</td>
@@ -276,43 +300,6 @@
             }).join("");
         }
 
-        // 파이썬 generate_tier_combos 완벽 복제
-        function generateTierCombos() {
-            const container = document.getElementById('tier-results');
-            container.innerHTML = `<h2 style="color:var(--yellow); text-align:center;">🚀 Ninety-Nine Multi-Tier Engine</h2>`;
-            
-            const searchRange = upcomingData.map(m => {
-                const p = getPredictionAI(m);
-                let oddsVal = 1.0;
-                if(p.conf >= 62) {
-                    const idx = p.key.includes("승") ? 0 : (p.key.includes("무")?1:2);
-                    oddsVal = p.key.includes("일반") ? Number(m.gOdds[idx]) : Number(m.hOdds[idx]);
-                }
-                return { m, p, odds: oddsVal };
-            }).filter(c => c.p.conf >= 62 && c.odds > 1.05)
-              .sort((a,b) => b.p.conf - a.p.conf)
-              .slice(0, 24);
-
-            const find = (count, minO, maxO, title) => {
-                let html = `<div class="tier-card"><div class="tier-title">${title}</div>`;
-                // 조합 생성 로직 (단순화된 시뮬레이션)
-                let combo = searchRange.slice(0, count);
-                let totalO = combo.reduce((a, b) => a * b.odds, 1);
-                
-                if(totalO >= minO && totalO <= maxO) {
-                    html += `★ ${count}폴더 조합: <span style="color:#ff5e57; font-weight:bold;">${totalO.toFixed(2)}배</span><br>`;
-                    combo.forEach(c => html += ` > ${c.m.home} | ${c.p.key} (${c.odds})<br>`);
-                } else {
-                    html += `적합한 고신뢰도 조합을 찾을 수 없습니다.`;
-                }
-                container.insertAdjacentHTML('beforeend', html + `</div>`);
-            };
-
-            find(3, 5.0, 15.0, "TIER 1 (수익률 500%~1500% 타겟)");
-            find(4, 16.0, 30.0, "TIER 2 (중배당 핵심 전략)");
-            find(5, 51.0, 99.0, "TIER 3 (나인티나인 고배당)");
-        }
-
         function runSimulation() {
             const samples = pastData.slice(-100);
             let hits = 0;
@@ -320,33 +307,7 @@
                 const p = getPredictionAI(m);
                 if(p.key && (m.genRes === p.key.split('[')[1][0] || m.hanRes === p.key.split('[')[1][0])) hits++;
             });
-            alert(`🧪 최근 100경기 백테스팅 결과\n---------------------------\n평균 적중률: ${(hits/samples.length*100).toFixed(1)}%`);
-        }
-
-        function showDetail(idx) {
-            const m = upcomingData[idx];
-            const p = getPredictionAI(m);
-            const h = getMomentumScore(m.home);
-            const a = getMomentumScore(m.away);
-            
-            const content = `
-[경기] ${m.league} | ${m.home} vs ${m.away}
-------------------------------------------------
-▶ 기세 점수: 홈(${h.score}) vs 원정(${a.score})
-▶ 최근 흐름: 홈(${h.history.join('-')}) / 원정(${a.history.join('-')})
-▶ AI 결론: ${p.text}
-▶ 근거 사례: 총 ${p.hits}개의 동일 패턴 분석 완료
-------------------------------------------------
-※ 파이썬 v10.11 엔진과 동일한 알고리즘으로 산출되었습니다.
-            `;
-            document.getElementById('m-content').innerText = content;
-            document.getElementById('modal').style.display = 'block';
-            document.querySelector('.overlay').style.display = 'block';
-        }
-
-        function closeModal() {
-            document.getElementById('modal').style.display = 'none';
-            document.querySelector('.overlay').style.display = 'none';
+            alert(`🧪 최근 100경기 백테스팅 결과: 적중률 ${(hits/samples.length*100).toFixed(1)}%`);
         }
     </script>
 </body>
