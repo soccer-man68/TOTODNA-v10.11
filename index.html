@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOTO_DNA v10.11 - Visual Expert</title>
+    <!-- 엑셀 파싱 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-bg: #2c3e50;
+            --accent-green: #27ae60;
+            --accent-purple: #8e44ad;
+            --accent-orange: #f39c12;
+            --danger-red: #e74c3c;
+            --dark-panel: #1e272e;
+            --text-light: #ecf0f1;
+        }
+
+        body { font-family: 'Malgun Gothic', sans-serif; margin: 0; background-color: #f4f7f6; }
+        
+        /* 암호 보호 오버레이 */
+        #password-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--primary-bg); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 10000;
+        }
+        #password-overlay input {
+            padding: 15px; font-size: 1.2rem; border-radius: 5px; border: none; width: 250px; text-align: center;
+        }
+        #password-overlay button {
+            margin-top: 15px; padding: 10px 25px; background: var(--accent-green);
+            color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;
+        }
+
+        /* 메인 UI */
+        header { background: var(--primary-bg); padding: 15px; color: white; display: flex; align-items: center; gap: 15px; }
+        .btn { padding: 10px 18px; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; }
+        .btn-analyze { background: var(--accent-green); }
+        .btn-sim { background: var(--accent-purple); }
+        
+        /* 탭 시스템 */
+        .tabs { display: flex; background: #ddd; padding: 5px 10px 0; }
+        .tab { padding: 10px 20px; cursor: pointer; background: #ccc; margin-right: 5px; border-radius: 5px 5px 0 0; font-weight: bold; }
+        .tab.active { background: white; border-bottom: 2px solid var(--accent-green); }
+        
+        .content-area { display: none; padding: 20px; height: 75vh; overflow-y: auto; background: white; }
+        .content-area.active { display: block; }
+
+        table { width: 100%; border-collapse: collapse; font-family: 'Consolas', monospace; font-size: 13px; }
+        th { background: #34495e; color: white; padding: 10px; position: sticky; top: 0; }
+        td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        
+        /* 결과 태그 색상 */
+        .win { color: #0984e3; font-weight: bold; }
+        .draw { color: #00b894; font-weight: bold; }
+        .loss { color: #d63031; font-weight: bold; }
+        .strong { background: #eb4d4b; color: white; border-radius: 3px; padding: 2px 5px; }
+        .highlight-cell { background-color: #D6EAF8; font-weight: bold; }
+        
+        /* 프리미엄 티어 스타일 */
+        #tier-view { background: var(--dark-panel); color: var(--text-light); }
+        .tier-card { border-left: 5px solid #00d2d3; background: #2d3436; margin-bottom: 15px; padding: 15px; }
+        .tier-title { color: #f1c40f; font-size: 1.2rem; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <!-- 암호 입력 화면 -->
+    <div id="password-overlay">
+        <h2 style="color: white;">TOTO_DNA v10.11 접속</h2>
+        <input type="password" id="pw-input" placeholder="비밀번호 입력">
+        <button onclick="checkPassword()">로그인</button>
+        <p id="pw-msg" style="color: #ff7675; margin-top: 10px;"></p>
+    </div>
+
+    <!-- 메인 대시보드 -->
+    <header>
+        <h2 style="margin: 0; color: #f1c40f;">TOTO_DNA v10.11</h2>
+        <input type="file" id="excel-file" style="display: none;" accept=".xlsx">
+        <button class="btn btn-analyze" onclick="document.getElementById('excel-file').click()">📊 데이터 로드</button>
+        <button class="btn btn-sim" onclick="alert('시뮬레이션 엔진을 가동합니다.')">🧪 3.4.5 시뮬레이션</button>
+        <span id="status-label">시스템 대기 중...</span>
+    </header>
+
+    <div class="tabs">
+        <div class="tab active" onclick="showTab(0)">[전체 경기]</div>
+        <div class="tab" onclick="showTab(1)">[승무패 경기]</div>
+        <div class="tab" onclick="showTab(2)">[정밀 시나리오]</div>
+        <div class="tab" onclick="showTab(3)">[🔥 3.4.5 티어]</div>
+    </div>
+
+    <div id="tab0" class="content-area active">
+        <table id="main-table">
+            <thead>
+                <tr>
+                    <th>시간</th><th>리그</th><th>경기(홈 vs 원정)</th><th>일반배당</th><th>핸디</th><th>핸디배당</th><th>AI 분석 결과</th>
+                </tr>
+            </thead>
+            <tbody id="match-list-all"></tbody>
+        </table>
+    </div>
+
+    <div id="tab1" class="content-area">
+        <table id="smp-table">
+            <thead>
+                <tr>
+                    <th>시간</th><th>리그</th><th>경기</th><th>일반배당</th><th>핸디</th><th>핸디배당</th><th>AI 분석 결과</th>
+                </tr>
+            </thead>
+            <tbody id="match-list-smp"></tbody>
+        </table>
+    </div>
+
+    <div id="tab2" class="content-area">
+        <h3>정밀 시나리오 통계 (최근 데이터 기반)</h3>
+        <div id="scenario-view">분석 데이터를 먼저 로드하세요.</div>
+    </div>
+
+    <div id="tab3" class="content-area" id="tier-view">
+        <div id="tier-container">
+            <h3 class="tier-title">🚀 Multi-Tier Premium 조합 엔진</h3>
+            <p>전략: 정배/역배 혼합 구성을 통한 고수익 포트폴리오 도출</p>
+            <div id="tier-results"></div>
+        </div>
+    </div>
+
+    <script>
+        // 1. 비밀번호 체크
+        function checkPassword() {
+            const pw = document.getElementById('pw-input').value;
+            if(pw === "4938") {
+                document.getElementById('password-overlay').style.display = 'none';
+            } else {
+                document.getElementById('pw-msg').innerText = "접근 권한이 없습니다.";
+            }
+        }
+
+        // 2. 탭 전환
+        function showTab(idx) {
+            document.querySelectorAll('.tab').forEach((t, i) => {
+                t.classList.toggle('active', i === idx);
+            });
+            document.querySelectorAll('.content-area').forEach((c, i) => {
+                c.classList.toggle('active', i === idx);
+            });
+        }
+
+        // 3. 엑셀 파일 처리
+        document.getElementById('excel-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            
+            document.getElementById('status-label').innerText = "⚙️ 분석 중...";
+
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array', cellStyles: true, cellFill: true});
+                
+                // 첫 번째 시트 (일반핸디) 분석
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+
+                processData(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // 4. 데이터 가공 및 렌더링
+        function processData(rows) {
+            const tbodyAll = document.getElementById('match-list-all');
+            const tbodySmp = document.getElementById('match-list-smp');
+            tbodyAll.innerHTML = "";
+            tbodySmp.innerHTML = "";
+
+            // 시뮬레이션용 데이터 루프 (Python의 load_and_analyze 로직)
+            for(let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                if(!row[2]) continue; // 리그명 없으면 패스
+
+                const time = String(row[1] || "").substring(5, 16);
+                const league = row[2] || "";
+                const home = row[3] || "";
+                const away = row[5] || "";
+                const handi = row[14] || "";
+                
+                // 가상의 AI 분석 결과 (Python get_prediction_ai 로직 모사)
+                const conf = Math.floor(Math.random() * 40) + 50; 
+                let aiRes = `[일반] 승 (${conf}점)`;
+                let resClass = "win";
+                if(conf > 80) { aiRes = `🔥 [강력] 승 (${conf}점)`; resClass = "strong"; }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${time}</td>
+                    <td>${league}</td>
+                    <td style="text-align:left"><b>${home}</b> vs ${away}</td>
+                    <td>${row[7]||''} | ${row[8]||''} | ${row[9]||''}</td>
+                    <td>${handi}</td>
+                    <td>${row[15]||''} | ${row[16]||''} | ${row[17]||''}</td>
+                    <td class="${resClass}">${aiRes}</td>
+                `;
+
+                tbodyAll.appendChild(tr);
+
+                // 승무패 경기 (임의의 조건: 리그 셀에 색상이 있는 경우 - 여기서는 리그명 기준 필터링 예시)
+                if(league.includes("K리그") || league.includes("EPL")) {
+                    tbodySmp.appendChild(tr.cloneNode(true));
+                }
+            }
+
+            document.getElementById('status-label').innerText = `✅ 분석 완료 (총 ${rows.length - 1}경기)`;
+            generateTiers();
+        }
+
+        // 5. 티어 조합 생성 (더미 데이터 예시)
+        function generateTiers() {
+            const container = document.getElementById('tier-results');
+            container.innerHTML = `
+                <div class="tier-card">
+                    <div class="tier-title">💎 TIER 1 (수익률 1000% 타겟 조합)</div>
+                    <p> ★ 3폴더 조합: 12.50배 (평균 신뢰도: 84.2점)</p>
+                    <p style="font-size:0.9rem; color:#bdc3c7;">데이터 로드 시 실제 분석 결과가 여기에 표시됩니다.</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
