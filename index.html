@@ -12,10 +12,10 @@
         /* 모바일 헤더 */
         header { background: var(--bg); color: white; padding: 15px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; position: sticky; top: 0; z-index: 1000; }
         .logo { font-size: 1.3rem; font-weight: bold; color: var(--yellow); width: 100%; margin-bottom: 8px; }
-        .btn { padding: 10px; border: none; border-radius: 6px; color: white; font-weight: bold; font-size: 13px; flex: 1; min-width: 100px; }
+        .btn { padding: 10px; border: none; border-radius: 6px; color: white; font-weight: bold; font-size: 13px; flex: 1; min-width: 100px; cursor: pointer; }
         
         /* 탭 메뉴 (모바일 스크롤) */
-        .tabs { display: flex; background: #dfe6e9; overflow-x: auto; border-bottom: 2px solid #bdc3c7; sticky: top; top: 85px; z-index: 999; }
+        .tabs { display: flex; background: #dfe6e9; overflow-x: auto; border-bottom: 2px solid #bdc3c7; position: sticky; top: 85px; z-index: 999; }
         .tab { padding: 12px 18px; cursor: pointer; background: #b2bec3; white-space: nowrap; font-weight: bold; border-right: 1px solid #ccc; }
         .tab.active { background: white; color: var(--bg); border-bottom: 4px solid var(--green); }
         
@@ -28,7 +28,7 @@
         th { background: #34495e; color: white; padding: 12px 8px; font-size: 13px; position: sticky; top: 0; }
         td { border: 1px solid #dfe6e9; padding: 10px 8px; text-align: center; font-size: 13px; }
         
-        /* 신뢰도 및 결과 색상 (파이썬 스타일) */
+        /* 신뢰도 및 결과 색상 */
         .win { color: #0984e3; font-weight: bold; }
         .draw { color: #00b894; font-weight: bold; }
         .loss { color: #d63031; font-weight: bold; }
@@ -44,9 +44,10 @@
         /* 상태 메세지 */
         #status { width: 100%; font-size: 12px; color: var(--yellow); }
         
-        /* 암호 레이어 */
+        /* 암호 레이어 - 버튼 크기 수정 */
         #password-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10001; padding: 30px; }
-        #pw-input { padding: 15px; font-size: 1.2rem; width: 100%; max-width: 280px; border-radius: 8px; border: none; margin-bottom: 15px; text-align: center; }
+        #pw-input { padding: 15px; font-size: 1.2rem; width: 100%; max-width: 280px; border-radius: 8px; border: none; margin-bottom: 15px; text-align: center; outline: none; }
+        .btn-pw { width: 160px; padding: 12px; background: var(--green); font-size: 15px; border-radius: 50px; flex: none; }
         
         /* 모달 (정밀 리포트) */
         #modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width: 90%; background:white; z-index:2000; padding:20px; border-radius:12px; max-height: 80vh; overflow-y: auto; }
@@ -56,9 +57,9 @@
 <body>
 
     <div id="password-overlay">
-        <h2 style="color:white;">TOTO_DNA v10.11</h2>
+        <h2 style="color:white; margin-bottom: 20px;">TOTO_DNA v10.11</h2>
         <input type="password" id="pw-input" placeholder="비밀번호 입력">
-        <button class="btn" style="background:var(--green); max-width:280px; width:100%;" onclick="checkPw()">시스템 접속</button>
+        <button class="btn btn-pw" onclick="checkPw()">시스템 접속</button>
     </div>
 
     <header>
@@ -124,7 +125,6 @@
             return "NO_FILL";
         }
 
-        // 파이썬 itertools.combinations 완벽 구현
         function getCombinations(array, size) {
             const result = [];
             function backtrack(start, combo) {
@@ -139,12 +139,12 @@
 
         document.getElementById('file-input').addEventListener('change', async function(e) {
             const file = e.target.files[0];
+            if(!file) return;
             document.getElementById('status').innerText = "⚙️ 파이썬 로직 동기화 중...";
             const workbook = new ExcelJS.Workbook();
             await workbook.xlsx.load(file);
             const ws = workbook.getWorksheet('일반핸디') || workbook.worksheets[0];
 
-            // 1. 배경색 학습 (파이썬 learn_colors_smart)
             const colorCounts = {};
             for(let i=2; i<=100; i++) {
                 const cell = ws.getRow(i).getCell(8);
@@ -153,7 +153,6 @@
             }
             normalBgColor = Object.keys(colorCounts).reduce((a, b) => colorCounts[a] > colorCounts[b] ? a : b, "NO_FILL");
 
-            // 2. 데이터 분류 및 엔진 빌드
             pastData = []; upcomingData = []; teamHistory = {};
             caches = { lvl1: {}, lvl2: {}, lvl3: {} };
             
@@ -191,17 +190,15 @@
                     isSmp: (getColorKey(row.getCell(3)) !== "NO_FILL" && getColorKey(row.getCell(3)) !== normalBgColor)
                 };
 
-                if(m.genRes === "" || m.genRes === "None") upcomingData.push(m);
+                if(m.genRes === "" || m.genRes === "None" || m.genRes === "undefined") upcomingData.push(m);
                 else {
                     pastData.push(m);
-                    // 캐싱 (Python build_stat_engine 동일 로직)
                     const resKey = `${m.genRes}_${m.hanRes}`;
                     const k1 = `${m.league}_${m.handi}_${m.gPat}`, k2 = `${m.league}_${m.gPat}`, k3 = `${m.gPat}_${m.hPat}`;
                     [ [caches.lvl1, k1], [caches.lvl2, k2], [caches.lvl3, k3] ].forEach(([cache, k]) => {
                         if(!cache[k]) cache[k] = {};
                         cache[k][resKey] = (cache[k][resKey] || 0) + 1;
                     });
-                    // 기세 (Python team_history)
                     if(!teamHistory[m.home]) teamHistory[m.home] = [];
                     if(!teamHistory[m.away]) teamHistory[m.away] = [];
                     teamHistory[m.home].push(m.genRes);
@@ -215,31 +212,21 @@
             document.getElementById('status').innerText = `✅ 완료: 과거(${pastData.length}) / 예정(${upcomingData.length})`;
         });
 
-        // 파이썬 get_momentum_score 1:1 복제
         function getMomentumScore(team) {
             const recent = (teamHistory[team] || []).slice(-6);
             let score = 0;
             recent.forEach((res, i) => {
-                const weight = (i + 1) * 0.3; // 최근 경기 가중치
+                const weight = (i + 1) * 0.3;
                 if(res === "승") score += 3 * weight;
                 else if(res === "무") score += 1 * weight;
             });
             return { score: Number(score.toFixed(1)), history: recent };
         }
 
-        // 파이썬 get_prediction_ai 1:1 복제 (핵심 로직)
         function getPredictionAI(m) {
             if(!m.gPat && !m.hPat) return { text: "패턴 데이터 부족", conf: 0 };
-            
-            let points = {};
-            let totalHits = 0;
-            
-            // 파이썬 분석 가중치 레벨 (20, 10, 5)
-            const analysisLevels = [
-                [caches.lvl1, 20.0, `${m.league}_${m.handi}_${m.gPat}`],
-                [caches.lvl2, 10.0, `${m.league}_${m.gPat}`],
-                [caches.lvl3, 5.0, `${m.gPat}_${m.hPat}`]
-            ];
+            let points = {}; let totalHits = 0;
+            const analysisLevels = [ [caches.lvl1, 20.0, `${m.league}_${m.handi}_${m.gPat}`], [caches.lvl2, 10.0, `${m.league}_${m.gPat}`], [caches.lvl3, 5.0, `${m.gPat}_${m.hPat}`] ];
 
             analysisLevels.forEach(([cache, weight, key]) => {
                 const counter = cache[key];
@@ -248,42 +235,21 @@
                         const [gRes, hRes] = resKey.split("_");
                         const count = counter[resKey];
                         totalHits += count;
-                        
-                        m.gPatTuple.forEach(p => {
-                            if(gRes === p) {
-                                const k = `일반[${p}]`;
-                                points[k] = (points[k] || 0) + weight * count;
-                            }
-                        });
-                        m.hPatTuple.forEach(p => {
-                            if(hRes === p) {
-                                const k = `핸디[${p}]`;
-                                points[k] = (points[k] || 0) + weight * count;
-                            }
-                        });
+                        m.gPatTuple.forEach(p => { if(gRes === p) { const k = `일반[${p}]`; points[k] = (points[k] || 0) + weight * count; } });
+                        m.hPatTuple.forEach(p => { if(hRes === p) { const k = `핸디[${p}]`; points[k] = (points[k] || 0) + weight * count; } });
                     }
                 }
             });
 
             if(Object.keys(points).length === 0) return { text: "매칭 사례 없음", conf: 0 };
-
-            // 기세 보정 (diff >= 5.0 -> 1.3배 가중치)
-            const hScore = getMomentumScore(m.home).score;
-            const aScore = getMomentumScore(m.away).score;
-            const diff = hScore - aScore;
-            
+            const hScore = getMomentumScore(m.home).score, aScore = getMomentumScore(m.away).score, diff = hScore - aScore;
             if(diff >= 5.0 && points["일반[승]"]) points["일반[승]"] *= 1.3;
             else if(diff <= -5.0 && points["일반[패]"]) points["일반[패]"] *= 1.3;
 
-            // 최선의 예측 선정
             const sorted = Object.entries(points).sort((a,b) => b[1] - a[1]);
-            const [bestKey, bestVal] = sorted[0];
-            const sumPoints = Object.values(points).reduce((a,b) => a+b, 0);
-
-            // 파이썬 신뢰도 공식: (best_val / sum) * 70 + min(hits, 25) * 1.2
+            const [bestKey, bestVal] = sorted[0], sumPoints = Object.values(points).reduce((a,b) => a+b, 0);
             let confidence = (bestVal / sumPoints) * 70 + Math.min(totalHits, 25) * 1.2;
             confidence = Math.min(100, Math.floor(confidence));
-
             const prefix = confidence >= 82 ? "🔥[강력]" : (confidence >= 68 ? "[추천]" : "[일반]");
             return { text: `${prefix} ${bestKey} (${confidence}점)`, key: bestKey, conf: confidence, hits: totalHits };
         }
@@ -292,7 +258,6 @@
             const container = document.getElementById('tier-results');
             container.innerHTML = `<h2 style="color:var(--yellow); text-align:center;">🚀 Ninety-Nine Multi-Tier Engine</h2>`;
             
-            // 파이썬 후보 경기 선정 기준 (conf >= 62, odds > 1.05)
             const candidates = upcomingData.map(m => {
                 const p = getPredictionAI(m);
                 let oddsVal = 0;
@@ -313,7 +278,7 @@
                     const totalO = combo.reduce((a, b) => a * b.odds, 1);
                     const avgConf = combo.reduce((a, b) => a + b.p.conf, 0) / count;
                     if(totalO >= minO && totalO <= maxO) found.push({combo, totalO, avgConf});
-                    if(found.length >= 15) return; // 파이썬 루프 제한
+                    if(found.length >= 15) return;
                 });
 
                 found.sort((a, b) => b.avgConf - a.avgConf);
@@ -321,14 +286,18 @@
                 else {
                     found.slice(0, 2).forEach(f => {
                         html += `<div class="combo-box">★ <span class="odds-val">${f.totalO.toFixed(2)}배</span> (평균 신뢰도: ${f.avgConf.toFixed(1)}점)<br>`;
-                        f.combo.forEach(c => html += ` > ${c.m.home} [${c.p.key.replace('일반','').replace('핸디','')}] (${c.odds.toFixed(2)}배)<br>`);
+                        f.combo.forEach(c => {
+                            // 일반/핸디 구분을 명확히 하기 위해 문자열 가공
+                            const betType = c.p.key.includes("일반") ? "일반" : "핸디";
+                            const betRes = c.p.key.split('[')[1].split(']')[0];
+                            html += ` > ${c.m.home} [${betType}_${betRes}] (${c.odds.toFixed(2)}배)<br>`;
+                        });
                         html += `</div>`;
                     });
                 }
                 container.insertAdjacentHTML('beforeend', html + `</div>`);
             };
 
-            // 파이썬 티어 배당 범위
             findCombos(3, 5.0, 15.0, "TIER 1 (안정형)");
             findCombos(4, 16.0, 30.0, "TIER 2 (전략형)");
             findCombos(5, 31.0, 99.0, "TIER 3 (나인티나인 잭팟)");
@@ -367,12 +336,13 @@
 
         function runSimulation() {
             const samples = pastData.slice(-100);
+            if(samples.length === 0) { alert("데이터가 없습니다."); return; }
             let hits = 0;
             samples.forEach(m => {
                 const p = getPredictionAI(m);
                 if(p.key && (m.genRes === p.key.split('[')[1][0])) hits++;
             });
-            alert(`🧪 최근 100경기 백테스팅: 적중률 ${(hits/samples.length*100).toFixed(1)}%`);
+            alert(`🧪 최근 ${samples.length}경기 백테스팅: 적중률 ${(hits/samples.length*100).toFixed(1)}%`);
         }
 
         function showDetail(idx) {
